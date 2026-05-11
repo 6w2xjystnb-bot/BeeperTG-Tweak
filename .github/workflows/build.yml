@@ -35,6 +35,8 @@ jobs:
           export PATH=$THEOS/bin:$PATH
           make clean
           make FINALPACKAGE=1 2>&1 | tee build.log
+          echo "=== Theos output tree ==="
+          find .theos/obj -type f
         continue-on-error: true
 
       - name: Upload build log (on failure)
@@ -49,4 +51,6 @@ jobs:
         if: success()
         with:
           name: BeeperTG-dylib
-          path: .theos/obj/**/*.dylib
+          path: |
+            .theos/obj/BeeperTG.dylib
+            .theos/obj/arm64*/BeeperTG.dylib
