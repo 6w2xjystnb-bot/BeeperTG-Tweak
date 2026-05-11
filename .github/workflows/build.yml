@@ -17,7 +17,9 @@ jobs:
       - name: Install dependencies
         run: |
           brew install dpkg ldid
-          xcode-select -p
+          which make
+          which clang
+          clang --version
 
       - name: Clone Theos
         run: |
@@ -28,27 +30,30 @@ jobs:
           mv sdks-master/*.sdk ${{ github.workspace }}/theos/sdks/
           rm -rf sdks-master master.zip
           ls ${{ github.workspace }}/theos/sdks/
+          ls ${{ github.workspace }}/theos/makefiles/
 
       - name: Build dylib
         run: |
           export THEOS=${{ github.workspace }}/theos
           export PATH=$THEOS/bin:$PATH
-          make clean
+          echo "THEOS=$THEOS"
+          make clean || true
           make FINALPACKAGE=1 2>&1 | tee build.log
           echo "=== Theos output tree ==="
           find .theos/obj -type f || true
-          echo "=== Listing .theos/obj ==="
-          ls -la .theos/obj/ || true
-        continue-on-error: true
+          echo "=== Build log ==="
+          cat build.log
 
       - name: Upload build log
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: build-log
           path: build.log
 
       - name: Upload Theos obj folder
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: theos-obj
           path: .theos/obj/**
