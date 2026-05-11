@@ -1,0 +1,9 @@
+Package: com.yourcompany.beepertg
+Name: BeeperTG
+Depends: mobilesubstrate, firmware (>= 15.0)
+Version: 0.0.1
+Architecture: iphoneos-arm
+Description: Beeper-style multi-messenger bridge inside Telegram. VK phase 1.
+Maintainer: You
+Author: You
+Section: Tweaks
