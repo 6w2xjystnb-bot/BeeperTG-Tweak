@@ -19,7 +19,6 @@ jobs:
           brew install dpkg ldid
           which make
           which clang
-          clang --version
 
       - name: Clone Theos
         run: |
@@ -29,20 +28,23 @@ jobs:
           mkdir -p ${{ github.workspace }}/theos/sdks
           mv sdks-master/*.sdk ${{ github.workspace }}/theos/sdks/
           rm -rf sdks-master master.zip
-          ls ${{ github.workspace }}/theos/sdks/
-          ls ${{ github.workspace }}/theos/makefiles/
 
       - name: Build dylib
         run: |
+          set -o pipefail
           export THEOS=${{ github.workspace }}/theos
           export PATH=$THEOS/bin:$PATH
-          echo "THEOS=$THEOS"
-          make clean || true
-          make FINALPACKAGE=1 2>&1 | tee build.log
-          echo "=== Theos output tree ==="
-          find .theos/obj -type f || true
-          echo "=== Build log ==="
-          cat build.log
+          make clean 2>&1 | tee build.log
+          make FINALPACKAGE=1 2>&1 | tee -a build.log
+          echo "=== .theos/obj contents ==="
+          ls -la .theos/obj/ 2>&1 | tee -a build.log || true
+          find .theos/obj -type f 2>&1 | tee -a build.log || true
+
+      - name: Debug output
+        if: always()
+        run: |
+          echo "=== LAST 100 LINES OF BUILD LOG ==="
+          tail -n 100 build.log || true
 
       - name: Upload build log
         uses: actions/upload-artifact@v4
@@ -51,9 +53,9 @@ jobs:
           name: build-log
           path: build.log
 
-      - name: Upload Theos obj folder
+      - name: Upload dylib
         uses: actions/upload-artifact@v4
-        if: always()
+        if: success()
         with:
-          name: theos-obj
-          path: .theos/obj/**
+          name: BeeperTG-dylib
+          path: .theos/obj/**/*.dylib
