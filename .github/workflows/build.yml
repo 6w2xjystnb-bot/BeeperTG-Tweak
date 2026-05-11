@@ -14,31 +14,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Cache Theos
-        uses: actions/cache@v4
-        id: theos-cache
-        with:
-          path: theos
-          key: ${{ runner.os }}-theos-${{ hashFiles('Makefile') }}
-          restore-keys: |
-            ${{ runner.os }}-theos-
+      - name: Install Theos dependencies
+        run: |
+          brew install dpkg ldid
 
       - name: Setup Theos
-        if: steps.theos-cache.outputs.cache-hit != 'true'
         uses: Randomblock1/theos-action@v1
         with:
           theos-dir: 'theos'
           theos-src: 'https://github.com/theos/theos'
           theos-sdks: 'https://github.com/theos/sdks'
 
-      - name: Build package
+      - name: Build dylib
         run: |
           export THEOS=./theos
           make clean
-          make package FINALPACKAGE=1
+          make FINALPACKAGE=1
 
-      - name: Upload artifact
+      - name: Upload dylib artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BeeperTG-deb
-          path: packages/*.deb
+          name: BeeperTG-dylib
+          path: .theos/obj/**/*.dylib
