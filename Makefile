@@ -8,11 +8,7 @@ LIBRARY_NAME = BeeperTG
 
 BeeperTG_FILES = $(wildcard src/*.m)
 BeeperTG_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
-BeeperTG_PRIVATE_FRAMEWORKS = UIKit
-BeeperTG_EXTRA_FRAMEWORKS =
+BeeperTG_FRAMEWORKS = UIKit Foundation
 BeeperTG_LIBRARIES =
 
 include $(THEOS_MAKE_PATH)/library.mk
-
-after-install::
-	install.exec "killall -9 Telegram"
