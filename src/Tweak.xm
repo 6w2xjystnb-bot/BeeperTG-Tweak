@@ -77,8 +77,9 @@
     // If we already have a token, warm up the long-poll
     NSUserDefaults *defs = [NSUserDefaults standardUserDefaults];
     NSString *token = [defs objectForKey:kVKAccessToken];
+    NSInteger userId = [defs integerForKey:kVKUserId];
     if (token.length > 0) {
-        [[BPVKBridge sharedInstance] setAccessToken:token];
+        [[BPVKBridge sharedInstance] setAccessToken:token userId:userId];
         [[BPVKBridge sharedInstance] startLongPolling];
     }
 }
