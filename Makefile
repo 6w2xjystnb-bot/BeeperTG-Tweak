@@ -4,11 +4,11 @@ TARGET = iphone:clang:latest:15.0
 
 include $(THEOS)/makefiles/common.mk
 
-LIBRARY_NAME = BeeperTG
+TWEAK_NAME = BeeperTG
 
 BeeperTG_FILES = src/Tweak.m src/BPVKBridge.m src/BPVKChatsController.m
 BeeperTG_CFLAGS = -fobjc-arc -Wno-deprecated-declarations
 BeeperTG_FRAMEWORKS = UIKit Foundation
 BeeperTG_LIBRARIES =
 
-include $(THEOS_MAKE_PATH)/library.mk
+include $(THEOS_MAKE_PATH)/tweak.mk
