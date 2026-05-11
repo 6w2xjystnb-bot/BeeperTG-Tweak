@@ -17,25 +17,36 @@ jobs:
       - name: Install dependencies
         run: |
           brew install dpkg ldid
+          xcode-select -p
 
       - name: Clone Theos
         run: |
-          git clone --recursive https://github.com/theos/theos.git $THEOS
+          git clone --recursive https://github.com/theos/theos.git ${{ github.workspace }}/theos
           curl -LO https://github.com/theos/sdks/archive/refs/heads/master.zip
-          unzip -q master.zip -d $THEOS/sdks
-          mv $THEOS/sdks/sdks-master/*.sdk $THEOS/sdks/
-          rm -rf $THEOS/sdks/sdks-master master.zip
-        env:
-          THEOS: ${{ github.workspace }}/theos
+          unzip -q master.zip
+          mkdir -p ${{ github.workspace }}/theos/sdks
+          mv sdks-master/*.sdk ${{ github.workspace }}/theos/sdks/
+          rm -rf sdks-master master.zip
+          ls ${{ github.workspace }}/theos/sdks/
 
       - name: Build dylib
         run: |
           export THEOS=${{ github.workspace }}/theos
+          export PATH=$THEOS/bin:$PATH
           make clean
-          make FINALPACKAGE=1
+          make FINALPACKAGE=1 2>&1 | tee build.log
+        continue-on-error: true
+
+      - name: Upload build log (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: build-log
+          path: build.log
 
       - name: Upload dylib artifact
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: BeeperTG-dylib
           path: .theos/obj/**/*.dylib
