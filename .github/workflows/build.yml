@@ -14,20 +14,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Theos dependencies
+      - name: Install dependencies
         run: |
           brew install dpkg ldid
 
-      - name: Setup Theos
-        uses: Randomblock1/theos-action@v1
-        with:
-          theos-dir: 'theos'
-          theos-src: 'https://github.com/theos/theos'
-          theos-sdks: 'https://github.com/theos/sdks'
+      - name: Clone Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git $THEOS
+          curl -LO https://github.com/theos/sdks/archive/refs/heads/master.zip
+          unzip -q master.zip -d $THEOS/sdks
+          mv $THEOS/sdks/sdks-master/*.sdk $THEOS/sdks/
+          rm -rf $THEOS/sdks/sdks-master master.zip
+        env:
+          THEOS: ${{ github.workspace }}/theos
 
       - name: Build dylib
         run: |
-          export THEOS=./theos
+          export THEOS=${{ github.workspace }}/theos
           make clean
           make FINALPACKAGE=1
 
