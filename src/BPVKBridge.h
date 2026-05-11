@@ -3,10 +3,7 @@
 //  BeeperTG
 //
 //  VK API client with Long Poll support.
-//  NOTE: VK restricted 'messages' scope for new apps. You need either:
-//        • A legacy app with messages approval, or
-//        • A service token + user token obtained manually in dev console, or
-//        • Use the unofficial VK Me reverse-engineered endpoints (advanced).
+//  Uses Kate Mobile credentials for Direct auth (login+password → token).
 //
 
 #import <Foundation/Foundation.h>
@@ -20,8 +17,15 @@
 @property (nonatomic, assign, readonly, getter=isPolling) BOOL polling;
 
 // ─── Auth ───
-- (void)setAccessToken:(NSString *)token;
-- (NSURL *)oauthURL; // Open this in SFSafariViewController or WKWebView
+- (void)setAccessToken:(NSString *)token userId:(NSInteger)userId;
+
+// Direct auth with Kate Mobile creds (no browser needed)
+- (void)directAuthWithLogin:(NSString *)login
+                   password:(NSString *)password
+                 completion:(void (^)(BOOL success, NSError *error))completion;
+
+// Browser OAuth URL (fallback if direct auth fails / 2FA required)
+- (NSURL *)browserOAuthURL;
 
 // ─── REST API ───
 - (void)fetchConversationsWithCount:(NSInteger)count

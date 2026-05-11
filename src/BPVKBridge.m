@@ -2,6 +2,8 @@
 //  BPVKBridge.m
 //  BeeperTG
 //
+//  VK API client with Direct Auth (Kate Mobile) + Long Poll.
+//
 
 #import "BPVKBridge.h"
 #import "BPConstants.h"
@@ -44,16 +46,60 @@
 
 #pragma mark - Auth
 
-- (void)setAccessToken:(NSString *)token {
+- (void)setAccessToken:(NSString *)token userId:(NSInteger)userId {
     _accessToken = [token copy];
+    _vkUserId = userId;
     NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
     [d setObject:token forKey:kVKAccessToken];
+    [d setInteger:userId forKey:kVKUserId];
     [d synchronize];
 }
 
-- (NSURL *)oauthURL {
-    NSString *url = [NSString stringWithFormat:@"%@?client_id=%@&display=mobile&redirect_uri=https://oauth.vk.com/blank.html&scope=%@&response_type=token&v=%@",
-                     kVKOAuthURL, kVKClientID, kVKScopes, kVKAPIVersion];
+// ─── Direct Auth (Kate Mobile keys) ───
+//  This hits https://oauth.vk.com/token with login+password.
+//  Kate Mobile client_id/secret bypass scope restrictions for messages.
+- (void)directAuthWithLogin:(NSString *)login
+                   password:(NSString *)password
+                 completion:(void (^)(BOOL success, NSError *error))completion {
+    NSString *urlStr = [NSString stringWithFormat:
+        @"%@?grant_type=password&client_id=%@&client_secret=%@&username=%@&password=%@&scope=%@&v=%@",
+        kVKDirectAuthURL,
+        kVKClientID,
+        kVKClientSecret,
+        [login stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]],
+        [password stringByAddingPercentEncodingWithAllowedCharacters:[NSCharacterSet URLQueryAllowedCharacterSet]],
+        kVKScopes,
+        kVKAPIVersion];
+
+    NSURL *url = [NSURL URLWithString:urlStr];
+    NSURLSessionDataTask *task = [self.session dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (error) { completion(NO, error); return; }
+            NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+            if (json[@"error"]) {
+                NSString *msg = json[@"error_description"] ?: json[@"error"];
+                NSError *err = [NSError errorWithDomain:@"VKDirectAuth" code:-1 userInfo:@{NSLocalizedDescriptionKey: msg}];
+                completion(NO, err);
+                return;
+            }
+            NSString *token = json[@"access_token"];
+            NSInteger userId = [json[@"user_id"] integerValue];
+            if (token.length > 0) {
+                [self setAccessToken:token userId:userId];
+                completion(YES, nil);
+            } else {
+                completion(NO, [NSError errorWithDomain:@"VKDirectAuth" code:-2 userInfo:@{NSLocalizedDescriptionKey: @"No token in response"}]);
+            }
+        });
+    }];
+    [task resume];
+}
+
+// ─── Browser OAuth (fallback) ───
+- (NSURL *)browserOAuthURL {
+    NSString *url = [NSString stringWithFormat:
+        @"%@?client_id=%@&display=mobile&redirect_uri=https://oauth.vk.com/blank.html&scope=%@&response_type=token&v=%@",
+        kVKOAuthAuthorizeURL, kVKClientID, kVKScopes, kVKAPIVersion];
     return [NSURL URLWithString:url];
 }
 
@@ -163,14 +209,13 @@
         if (error) { [self retryLongPollAfter:3]; return; }
         NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
         if (json[@"failed"]) {
-            // Re-init required
             [self obtainLongPollServer];
             return;
         }
         self.lpTs = [json[@"ts"] integerValue];
         NSArray *updates = json[@"updates"];
         [self handleUpdates:updates];
-        [self pollLoop]; // recurse
+        [self pollLoop];
     }];
     [self.pollTask resume];
 }
@@ -182,16 +227,12 @@
 }
 
 - (void)handleUpdates:(NSArray *)updates {
-    // VK Long Poll update codes:
-    // 4 = new message, 5 = edit message, 2 = delete messages, etc.
     for (NSArray *upd in updates) {
         NSInteger code = [upd[0] integerValue];
         if (code == 4) {
-            // New message: [4, msg_id, flags, peer_id, ts, text, ...]
             NSInteger peerId = [upd[3] integerValue];
             NSString *text   = upd.count > 5 ? upd[5] : @"";
             NSLog(@"[BeeperTG] VK new message from %ld: %@", (long)peerId, text);
-            // TODO: Post NSNotification to BPVKChatsController to refresh / show badge
             [[NSNotificationCenter defaultCenter] postNotificationName:@"BeeperTG.VKNewMessage"
                                                                 object:nil
                                                               userInfo:@{@"peerId": @(peerId), @"text": text}];

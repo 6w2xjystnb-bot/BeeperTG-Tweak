@@ -16,7 +16,11 @@ static NSString * const kVKClientID       = @"2684578";
 static NSString * const kVKClientSecret   = @"lbzoEXrB9XHP5l8l5x5E";
 static NSString * const kVKAPIVersion     = @"5.199";
 static NSString * const kVKAPIBaseURL     = @"https://api.vk.com/method/";
-static NSString * const kVKOAuthURL       = @"https://oauth.vk.com/token";
+
+// Browser implicit flow (fallback)
+static NSString * const kVKOAuthAuthorizeURL = @"https://oauth.vk.com/authorize";
+// Direct auth endpoint (login + password → token). Works with Kate Mobile keys.
+static NSString * const kVKDirectAuthURL     = @"https://oauth.vk.com/token";
 
 // Full scope for everything we need (messages + friends + offline for no-expiry token)
 static NSString * const kVKScopes         = @"messages,friends,offline,photos,docs";
